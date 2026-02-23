@@ -51,10 +51,14 @@ export default function AssignmentCardsGenerator() {
 
     const downloadAllCards = () => {
         cards.forEach((card, index) => {
-            const link = document.createElement("a");
-            link.href = card.qr_code_image;
-            link.download = `${card.team_type}_card_${index + 1}.png`;
-            link.click();
+            setTimeout(() => {
+                const link = document.createElement("a");
+                link.href = card.qr_code_image;
+                link.download = `${card.team_type}_card_${index + 1}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }, index * 200);
         });
     };
 
@@ -84,7 +88,7 @@ export default function AssignmentCardsGenerator() {
                                 type="number"
                                 value={numInnocents}
                                 onChange={(e) => setNumInnocents(e.target.value)}
-                                inputProps={{ min: 1, max: 20 }}
+                                inputProps={{ min: 1 }}
                             />
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
@@ -94,7 +98,7 @@ export default function AssignmentCardsGenerator() {
                                 type="number"
                                 value={numTraitors}
                                 onChange={(e) => setNumTraitors(e.target.value)}
-                                inputProps={{ min: 1, max: 20 }}
+                                inputProps={{ min: 1 }}
                             />
                         </Grid>
                     </Grid>
@@ -104,7 +108,7 @@ export default function AssignmentCardsGenerator() {
                             Total Cards: {parseInt(numInnocents || "0") + parseInt(numTraitors || "0")}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Recommended: 15 Innocents + 5 Traitors = 20 Teams
+                            Enter any number of innocents and traitors to generate QR cards.
                         </Typography>
                     </Box>
 

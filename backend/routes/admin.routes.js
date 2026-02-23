@@ -383,11 +383,10 @@ router.get("/team-leads", async (req, res) => {
 router.post("/generate-cards", async (req, res) => {
     try {
         const { num_innocents, num_traitors } = req.body;
-        const total = num_innocents + num_traitors;
 
-        if (total !== 20) {
+        if (!num_innocents || !num_traitors || num_innocents < 1 || num_traitors < 1) {
             return res.status(400).json({
-                message: "Total cards must be 20 (innocents + traitors)"
+                message: "Number of innocents and traitors must each be at least 1"
             });
         }
 
