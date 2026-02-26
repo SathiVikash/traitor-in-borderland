@@ -106,10 +106,18 @@ router.post("/gold-bars", async (req, res) => {
         // Generate unique QR code
         const qr_code = uuidv4();
 
+        // Generate unique 6-digit entry code
+        let entry_code, codeExists = true;
+        while (codeExists) {
+            entry_code = String(Math.floor(100000 + Math.random() * 900000));
+            const check = await db.query("SELECT id FROM gold_bars WHERE entry_code = $1", [entry_code]);
+            codeExists = check.rows.length > 0;
+        }
+
         const result = await db.query(
-            `INSERT INTO gold_bars (qr_code, points, location_id, clue_text, clue_location_id) 
-             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [qr_code, points, location_id, clue_text, clue_location_id]
+            `INSERT INTO gold_bars (qr_code, points, location_id, clue_text, clue_location_id, entry_code) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [qr_code, points, location_id, clue_text, clue_location_id, entry_code]
         );
 
         const goldBar = result.rows[0];
@@ -153,14 +161,14 @@ router.get("/gold-bars/:id/qr", async (req, res) => {
     try {
         const { id } = req.params;
 
-        const result = await db.query("SELECT qr_code FROM gold_bars WHERE id = $1", [id]);
+        const result = await db.query("SELECT qr_code, entry_code FROM gold_bars WHERE id = $1", [id]);
 
         if (!result.rows.length) {
             return res.status(404).json({ message: "Gold bar not found" });
         }
 
         const qrCodeDataUrl = await QRCode.toDataURL(result.rows[0].qr_code, { width: 600, margin: 2 });
-        res.json({ qr_code_image: qrCodeDataUrl });
+        res.json({ qr_code_image: qrCodeDataUrl, entry_code: result.rows[0].entry_code });
     } catch (error) {
         console.error("Generate QR error:", error);
         res.status(500).json({ message: "Error generating QR code" });

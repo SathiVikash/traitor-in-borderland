@@ -15,6 +15,7 @@ import {
     Dialog,
     IconButton,
     Divider,
+    TextField,
 } from "@mui/material";
 import {
     QrCodeScanner,
@@ -59,6 +60,9 @@ export default function TraitorDashboard() {
     const [showScanner, setShowScanner] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [entryCode, setEntryCode] = useState("");
+    const [showEntryCode, setShowEntryCode] = useState(false);
+    const [submittingCode, setSubmittingCode] = useState(false);
     const [sabotageAlert, setSabotageAlert] = useState<{ open: boolean; endTime: string | null }>({
         open: false,
         endTime: null,
@@ -209,6 +213,35 @@ export default function TraitorDashboard() {
     const handleSignOut = async () => {
         await signOut();
         router.push("/");
+    };
+
+    const handleEntryCodeSubmit = async () => {
+        const code = entryCode.trim();
+        if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+            setError("Please enter a valid 6-digit code");
+            return;
+        }
+        setSubmittingCode(true);
+        setError("");
+        setSuccess("");
+        try {
+            const response = await teamAPI.scanGoldBar({ qr_code: code });
+            if (response.data.success === false) {
+                setError(response.data.message);
+            } else if (response.data.was_sabotaged) {
+                setSabotageAlert({ open: true, endTime: response.data.sabotage_end_time });
+            } else {
+                setSuccess(`Gold bar collected! +${response.data.points} points`);
+            }
+            if (response.data.next_clue) setCurrentClue(response.data.next_clue);
+            setEntryCode("");
+            setShowEntryCode(false);
+            await fetchData();
+        } catch (err: any) {
+            setError(err.response?.data?.message || "Invalid code. Try again.");
+        } finally {
+            setSubmittingCode(false);
+        }
     };
 
     const handleScanGold = async (data: string) => {
@@ -482,6 +515,64 @@ export default function TraitorDashboard() {
                             >
                                 Scan Gold Bar
                             </Button>
+
+                            {/* Manual Entry Code */}
+                            <Box sx={{ mt: 1.5 }}>
+                                <Button
+                                    fullWidth
+                                    variant="text"
+                                    size="small"
+                                    onClick={() => { setShowEntryCode(!showEntryCode); setEntryCode(""); setError(""); }}
+                                    sx={{ color: "rgba(255,255,255,0.4)", fontSize: "0.78rem", textTransform: "none", "&:hover": { color: "#EAB308" } }}
+                                >
+                                    {showEntryCode ? "▲ Hide manual entry" : "Can't scan? Enter 6-digit code"}
+                                </Button>
+
+                                {showEntryCode && (
+                                    <Box sx={{
+                                        mt: 1.5, p: 2.5, borderRadius: 3,
+                                        bgcolor: "rgba(234,179,8,0.06)",
+                                        border: "1px solid rgba(234,179,8,0.2)"
+                                    }}>
+                                        <Typography variant="caption" sx={{ color: "#EAB308", letterSpacing: 2, display: "block", mb: 1.5 }}>
+                                            MANUAL ENTRY CODE
+                                        </Typography>
+                                        <Box sx={{ display: "flex", gap: 1.5 }}>
+                                            <TextField
+                                                fullWidth
+                                                value={entryCode}
+                                                onChange={(e) => setEntryCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                                onKeyDown={(e) => e.key === "Enter" && handleEntryCodeSubmit()}
+                                                placeholder="_ _ _ _ _ _"
+                                                inputProps={{
+                                                    maxLength: 6,
+                                                    style: {
+                                                        textAlign: "center", fontFamily: "monospace",
+                                                        fontSize: "1.8rem", fontWeight: 700,
+                                                        letterSpacing: 12, color: "#EAB308", padding: "12px 8px"
+                                                    }
+                                                }}
+                                                sx={{
+                                                    "& .MuiOutlinedInput-root": {
+                                                        bgcolor: "rgba(0,0,0,0.3)",
+                                                        "& fieldset": { borderColor: "rgba(239,68,68,0.3)" },
+                                                        "&:hover fieldset": { borderColor: "rgba(234,179,8,0.6)" },
+                                                        "&.Mui-focused fieldset": { borderColor: "#EAB308" },
+                                                    }
+                                                }}
+                                            />
+                                            <Button
+                                                variant="contained"
+                                                onClick={handleEntryCodeSubmit}
+                                                disabled={submittingCode || entryCode.length !== 6}
+                                                sx={{ minWidth: 80, background: "linear-gradient(135deg, #EAB308 0%, #CA8A04 100%)", fontWeight: 700, "&:disabled": { opacity: 0.4 } }}
+                                            >
+                                                {submittingCode ? "..." : "GO"}
+                                            </Button>
+                                        </Box>
+                                    </Box>
+                                )}
+                            </Box>
 
                             {/* Leaderboard */}
                             <Box sx={{ mt: 4 }}>

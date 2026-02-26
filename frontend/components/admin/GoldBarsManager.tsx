@@ -40,6 +40,7 @@ interface GoldBar {
     clue_location_name: string;
     is_scanned: boolean;
     qr_code: string;
+    entry_code?: string;
 }
 
 export default function GoldBarsManager() {
@@ -125,6 +126,10 @@ export default function GoldBarsManager() {
         try {
             const response = await adminAPI.getGoldBarQR(goldBar.id);
             setSelectedQR(response.data.qr_code_image);
+            // Update entry_code from the QR response if not already on the bar object
+            if (response.data.entry_code) {
+                setSelectedGoldBar({ ...goldBar, entry_code: response.data.entry_code });
+            }
         } catch (error) {
             console.error("Error fetching QR code:", error);
             alert("Failed to load QR code");
@@ -137,48 +142,121 @@ export default function GoldBarsManager() {
     const handleDownloadQR = () => {
         if (!selectedQR || !selectedGoldBar) return;
 
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return;
+        const CARD_W = 700;
+        const CARD_H = 950;
+        const QR_SIZE = 480;
 
-            // Set canvas size (QR size + space for text)
-            canvas.width = img.width;
-            canvas.height = img.height + 80; // Extra 80px for text
+        const canvas = document.createElement("canvas");
+        canvas.width = CARD_W;
+        canvas.height = CARD_H;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
 
-            // Fill background white
-            ctx.fillStyle = "white";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // White background
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, CARD_W, CARD_H);
 
-            // Draw QR code
-            ctx.drawImage(img, 0, 0);
+        // Top gold accent bar
+        ctx.fillStyle = "#D97706";
+        ctx.fillRect(0, 0, CARD_W, 8);
+        ctx.fillRect(0, CARD_H - 8, CARD_W, 8);
 
-            // Draw text
-            ctx.fillStyle = "black";
-            ctx.font = "bold 24px Arial";
+        // ─── Health Club Logo top-left ───
+        const logo = new Image();
+        logo.crossOrigin = "anonymous";
+
+        // ─── QR image ───
+        const qrImg = new Image();
+        qrImg.crossOrigin = "anonymous";
+
+        const drawCard = () => {
+            ctx.clearRect(0, 0, CARD_W, CARD_H);
+
+            // Background
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, CARD_W, CARD_H);
+
+            // Gold accent bars
+            ctx.fillStyle = "#D97706";
+            ctx.fillRect(0, 0, CARD_W, 8);
+            ctx.fillRect(0, CARD_H - 8, CARD_W, 8);
+
+            // Logo top-left (max 90px height)
+            const logoH = 70;
+            const logoW = logo.naturalWidth ? (logo.naturalWidth / logo.naturalHeight) * logoH : 120;
+            ctx.drawImage(logo, 24, 20, logoW, logoH);
+
+            // Game title — centered
+            ctx.fillStyle = "#111827";
+            ctx.font = "bold 30px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(
-                `${selectedGoldBar.location_name}`,
-                canvas.width / 2,
-                img.height + 30
-            );
+            ctx.fillText("TRAITORS IN BORDERLAND", CARD_W / 2, 70);
 
-            ctx.font = "20px Arial";
-            ctx.fillText(
-                `${selectedGoldBar.points} Points`,
-                canvas.width / 2,
-                img.height + 60
-            );
+            // Thin divider
+            ctx.strokeStyle = "#E5E7EB";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(40, 100);
+            ctx.lineTo(CARD_W - 40, 100);
+            ctx.stroke();
+
+            // QR code centered
+            const qrX = (CARD_W - QR_SIZE) / 2;
+            const qrY = 120;
+            ctx.drawImage(qrImg, qrX, qrY, QR_SIZE, QR_SIZE);
+
+            // Location label
+            ctx.fillStyle = "#1F2937";
+            ctx.font = "bold 28px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(`📍 ${selectedGoldBar!.location_name}`, CARD_W / 2, qrY + QR_SIZE + 44);
+
+            // Divider before entry code
+            ctx.strokeStyle = "#D1D5DB";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(80, qrY + QR_SIZE + 64);
+            ctx.lineTo(CARD_W - 80, qrY + QR_SIZE + 64);
+            ctx.stroke();
+
+            // Entry code label
+            ctx.fillStyle = "#6B7280";
+            ctx.font = "18px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Manual Entry Code", CARD_W / 2, qrY + QR_SIZE + 94);
+
+            // Entry code value — big, spaced
+            ctx.fillStyle = "#D97706";
+            ctx.font = "bold 52px monospace";
+            ctx.letterSpacing = "8px";
+            ctx.textAlign = "center";
+            const code = selectedGoldBar!.entry_code || "------";
+            ctx.fillText(code.split("").join(" "), CARD_W / 2, qrY + QR_SIZE + 148);
+
+            ctx.letterSpacing = "0px";
+
+            // Bottom footer
+            ctx.fillStyle = "#9CA3AF";
+            ctx.font = "14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Health Club · VIT Chennai", CARD_W / 2, CARD_H - 22);
 
             // Download
             const link = document.createElement("a");
             link.href = canvas.toDataURL("image/png");
-            link.download = `gold_bar_${selectedGoldBar.id}_${selectedGoldBar.points}pts.png`;
+            link.download = `gold_bar_${selectedGoldBar!.id}_${selectedGoldBar!.location_name.replace(/\s+/g, "_")}.png`;
             link.click();
         };
-        img.src = selectedQR;
+
+        let loaded = 0;
+        const onLoad = () => { loaded++; if (loaded === 2) drawCard(); };
+
+        logo.onload = onLoad;
+        logo.onerror = onLoad; // proceed even if logo fails
+        qrImg.onload = onLoad;
+
+        logo.src = "/healthclub-logo.png";
+        qrImg.src = selectedQR;
     };
 
     const handleCloseDialog = () => {
@@ -320,8 +398,25 @@ export default function GoldBarsManager() {
                                                     primary={
                                                         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
                                                             <Typography sx={{ fontWeight: 600 }}>
-                                                                {bar.points} points
+                                                                {bar.points} pts
                                                             </Typography>
+                                                            {bar.entry_code && (
+                                                                <Typography
+                                                                    variant="caption"
+                                                                    sx={{
+                                                                        fontFamily: "monospace",
+                                                                        fontWeight: 700,
+                                                                        bgcolor: "rgba(234,179,8,0.15)",
+                                                                        color: "#EAB308",
+                                                                        px: 1,
+                                                                        py: 0.2,
+                                                                        borderRadius: 1,
+                                                                        letterSpacing: 2,
+                                                                    }}
+                                                                >
+                                                                    #{bar.entry_code}
+                                                                </Typography>
+                                                            )}
                                                             <Chip
                                                                 label={bar.is_scanned ? "Scanned" : "Available"}
                                                                 size="small"
@@ -413,17 +508,35 @@ export default function GoldBarsManager() {
                                     {selectedGoldBar && (
                                         <Box sx={{ mb: 2, textAlign: "left", p: 2, bgcolor: "rgba(255, 255, 255, 0.05)", borderRadius: 2 }}>
                                             <Typography variant="body2" sx={{ mb: 1 }}>
-                                                <strong>Points:</strong> {selectedGoldBar.points}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ mb: 1 }}>
                                                 <strong>Location:</strong> {selectedGoldBar.location_name}
                                             </Typography>
                                             <Typography variant="body2" sx={{ mb: 1 }}>
                                                 <strong>Clue:</strong> {selectedGoldBar.clue_text}
                                             </Typography>
-                                            <Typography variant="body2">
+                                            <Typography variant="body2" sx={{ mb: 2 }}>
                                                 <strong>Points to:</strong> {selectedGoldBar.clue_location_name}
                                             </Typography>
+                                            {selectedGoldBar.entry_code && (
+                                                <Box sx={{
+                                                    p: 2,
+                                                    bgcolor: "rgba(234,179,8,0.08)",
+                                                    border: "1px solid rgba(234,179,8,0.3)",
+                                                    borderRadius: 2,
+                                                    textAlign: "center"
+                                                }}>
+                                                    <Typography variant="caption" sx={{ color: "#EAB308", display: "block", mb: 0.5, letterSpacing: 2 }}>
+                                                        MANUAL ENTRY CODE
+                                                    </Typography>
+                                                    <Typography variant="h4" sx={{
+                                                        fontFamily: "monospace",
+                                                        fontWeight: 900,
+                                                        letterSpacing: 8,
+                                                        color: "#EAB308"
+                                                    }}>
+                                                        {selectedGoldBar.entry_code}
+                                                    </Typography>
+                                                </Box>
+                                            )}
                                         </Box>
                                     )}
                                 </>

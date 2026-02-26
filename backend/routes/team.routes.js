@@ -316,14 +316,14 @@ router.post("/scan-gold-bar", async (req, res) => {
             });
         }
 
-        // Find gold bar
+        // Find gold bar by qr_code OR entry_code
         const goldBarResult = await db.query(
-            "SELECT * FROM gold_bars WHERE qr_code = $1",
+            "SELECT * FROM gold_bars WHERE qr_code = $1 OR entry_code = $1",
             [qr_code]
         );
 
         if (!goldBarResult.rows.length) {
-            return res.status(404).json({ message: "Invalid QR code" });
+            return res.status(404).json({ message: "Invalid QR code or entry code" });
         }
 
         const goldBar = goldBarResult.rows[0];

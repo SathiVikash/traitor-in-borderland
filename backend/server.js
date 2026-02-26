@@ -64,6 +64,32 @@ const runMigrations = async () => {
         `);
         console.log("Migrations completed.");
 
+        // Add entry_code column to gold_bars if it doesn't exist
+        await db.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='gold_bars' AND column_name='entry_code') THEN
+                    ALTER TABLE gold_bars ADD COLUMN entry_code VARCHAR(6) UNIQUE;
+                END IF;
+            END $$;
+        `);
+
+        // Backfill entry_code for any existing gold bars that don't have one
+        const missingCodes = await db.query("SELECT id FROM gold_bars WHERE entry_code IS NULL");
+        for (const row of missingCodes.rows) {
+            let code, exists = true;
+            while (exists) {
+                code = String(Math.floor(100000 + Math.random() * 900000));
+                const check = await db.query("SELECT id FROM gold_bars WHERE entry_code = $1", [code]);
+                exists = check.rows.length > 0;
+            }
+            await db.query("UPDATE gold_bars SET entry_code = $1 WHERE id = $2", [code, row.id]);
+        }
+        if (missingCodes.rows.length > 0) {
+            console.log(`Backfilled entry_code for ${missingCodes.rows.length} gold bars.`);
+        }
+
         // Pre-warm Firebase token verification key cache with a dummy call
         // This avoids a cold-start timeout on the first real user login
         const admin = require("./config/firebase");
