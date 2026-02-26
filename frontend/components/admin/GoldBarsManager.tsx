@@ -205,25 +205,11 @@ export default function GoldBarsManager() {
             const qrY = 120;
             ctx.drawImage(qrImg, qrX, qrY, QR_SIZE, QR_SIZE);
 
-            // Location label
-            ctx.fillStyle = "#1F2937";
-            ctx.font = "bold 28px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText(`📍 ${selectedGoldBar!.location_name}`, CARD_W / 2, qrY + QR_SIZE + 44);
-
-            // Divider before entry code
-            ctx.strokeStyle = "#D1D5DB";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(80, qrY + QR_SIZE + 64);
-            ctx.lineTo(CARD_W - 80, qrY + QR_SIZE + 64);
-            ctx.stroke();
-
-            // Entry code label
+            // Entry code label — just below QR
             ctx.fillStyle = "#6B7280";
             ctx.font = "18px Arial";
             ctx.textAlign = "center";
-            ctx.fillText("Manual Entry Code", CARD_W / 2, qrY + QR_SIZE + 94);
+            ctx.fillText("Manual Entry Code", CARD_W / 2, qrY + QR_SIZE + 36);
 
             // Entry code value — big, spaced
             ctx.fillStyle = "#D97706";
@@ -231,9 +217,23 @@ export default function GoldBarsManager() {
             ctx.letterSpacing = "8px";
             ctx.textAlign = "center";
             const code = selectedGoldBar!.entry_code || "------";
-            ctx.fillText(code.split("").join(" "), CARD_W / 2, qrY + QR_SIZE + 148);
+            ctx.fillText(code.split("").join(" "), CARD_W / 2, qrY + QR_SIZE + 92);
 
             ctx.letterSpacing = "0px";
+
+            // Divider before location
+            ctx.strokeStyle = "#D1D5DB";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(80, qrY + QR_SIZE + 114);
+            ctx.lineTo(CARD_W - 80, qrY + QR_SIZE + 114);
+            ctx.stroke();
+
+            // Location label — bottom section
+            ctx.fillStyle = "#1F2937";
+            ctx.font = "bold 28px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(`📍 ${selectedGoldBar!.location_name}`, CARD_W / 2, qrY + QR_SIZE + 152);
 
             // Bottom footer
             ctx.fillStyle = "#9CA3AF";
