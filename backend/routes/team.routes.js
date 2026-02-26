@@ -301,6 +301,21 @@ router.post("/scan-gold-bar", async (req, res) => {
 
         const teamId = teamResult.rows[0].team_id;
 
+        // Check scan limit (4 per round)
+        const scanCountResult = await db.query(`
+            SELECT COUNT(*) FROM scans_history 
+            WHERE team_id = $1 
+            AND scanned_at >= (SELECT round_start_time FROM game_state WHERE id = 1)
+        `, [teamId]);
+        const scanCount = parseInt(scanCountResult.rows[0].count);
+
+        if (scanCount >= 4) {
+            return res.status(403).json({
+                message: "Scanning limit completed! You can only scan 4 gold bars per round.",
+                limit_reached: true
+            });
+        }
+
         // Find gold bar
         const goldBarResult = await db.query(
             "SELECT * FROM gold_bars WHERE qr_code = $1",

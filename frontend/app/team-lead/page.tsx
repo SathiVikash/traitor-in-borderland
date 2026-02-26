@@ -70,6 +70,7 @@ export default function TeamLeadDashboard() {
     const [currentClue, setCurrentClue] = useState<string | null>(null);
     const [gameState, setGameState] = useState<any>(null);
     const [showRoundStart, setShowRoundStart] = useState(false);
+    const [showRoundEnd, setShowRoundEnd] = useState(false);
     const [sabotageAlert, setSabotageAlert] = useState<{ open: boolean; endTime: string | null }>({ open: false, endTime: null });
 
     // Join team room for real-time updates
@@ -105,6 +106,16 @@ export default function TeamLeadDashboard() {
         socket.on("sabotaged", (data) => {
             setSabotageAlert({ open: true, endTime: data.sabotage_end_time });
             setSuccess("");
+        });
+
+        socket.on("round_ended", (data) => {
+            setGameState((prev: any) => ({
+                ...prev,
+                game_status: "completed"
+            }));
+            setSuccess(`Round ${data.round} has ended!`);
+            setShowRoundEnd(true);
+            fetchData();
         });
 
         socket.on("sabotage_ended", () => {
@@ -548,6 +559,45 @@ export default function TeamLeadDashboard() {
                             }}
                         >
                             LET'S GO!
+                        </Button>
+                    </Box>
+                </Dialog>
+
+                {/* Round End Dialog */}
+                <Dialog
+                    open={showRoundEnd}
+                    onClose={() => setShowRoundEnd(false)}
+                    maxWidth="sm"
+                    fullWidth
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 3,
+                            background: "linear-gradient(135deg, #475569 0%, #1E293B 100%)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                        }
+                    }}
+                >
+                    <Box sx={{ p: 4, textAlign: "center" }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: "#94A3B8" }}>
+                            ROUND {gameState?.current_round} ENDED!
+                        </Typography>
+                        <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
+                            Wait for the admin to start the next round.
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            size="large"
+                            onClick={() => setShowRoundEnd(false)}
+                            sx={{
+                                px: 4,
+                                py: 1.5,
+                                borderRadius: 2,
+                                background: "#475569",
+                                textTransform: "none",
+                                fontWeight: 700
+                            }}
+                        >
+                            OK
                         </Button>
                     </Box>
                 </Dialog>

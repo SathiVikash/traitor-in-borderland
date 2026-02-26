@@ -137,10 +137,48 @@ export default function GoldBarsManager() {
     const handleDownloadQR = () => {
         if (!selectedQR || !selectedGoldBar) return;
 
-        const link = document.createElement("a");
-        link.href = selectedQR;
-        link.download = `gold_bar_${selectedGoldBar.id}_${selectedGoldBar.points}pts.png`;
-        link.click();
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+
+            // Set canvas size (QR size + space for text)
+            canvas.width = img.width;
+            canvas.height = img.height + 80; // Extra 80px for text
+
+            // Fill background white
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw QR code
+            ctx.drawImage(img, 0, 0);
+
+            // Draw text
+            ctx.fillStyle = "black";
+            ctx.font = "bold 24px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                `${selectedGoldBar.location_name}`,
+                canvas.width / 2,
+                img.height + 30
+            );
+
+            ctx.font = "20px Arial";
+            ctx.fillText(
+                `${selectedGoldBar.points} Points`,
+                canvas.width / 2,
+                img.height + 60
+            );
+
+            // Download
+            const link = document.createElement("a");
+            link.href = canvas.toDataURL("image/png");
+            link.download = `gold_bar_${selectedGoldBar.id}_${selectedGoldBar.points}pts.png`;
+            link.click();
+        };
+        img.src = selectedQR;
     };
 
     const handleCloseDialog = () => {

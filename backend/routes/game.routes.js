@@ -111,6 +111,20 @@ router.post("/sabotage", verifyToken, async (req, res) => {
             return res.status(400).json({ message: "Game round is not in progress" });
         }
 
+        const gameState = gameSettings.rows[0];
+
+        // Restrict sabotage to only after 15 minutes of round start
+        const roundStartTime = new Date(gameState.round_start_time);
+        const now = new Date();
+        const minutesSinceStart = (now - roundStartTime) / 60000;
+
+        if (minutesSinceStart < 15) {
+            const remainingMins = Math.ceil(15 - minutesSinceStart);
+            return res.status(403).json({
+                message: `Traitors can only sabotage after 15 minutes of the game starting. Please wait ${remainingMins} more minute(s).`
+            });
+        }
+
         // Check if round time has expired using DB time
         const timeCheck = await db.query(`
             SELECT id FROM game_state 

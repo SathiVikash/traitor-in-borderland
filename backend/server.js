@@ -63,6 +63,13 @@ const runMigrations = async () => {
             ON CONFLICT (id) DO NOTHING;
         `);
         console.log("Migrations completed.");
+
+        // Pre-warm Firebase token verification key cache with a dummy call
+        // This avoids a cold-start timeout on the first real user login
+        const admin = require("./config/firebase");
+        admin.auth().verifyIdToken("warmup").catch(() => {
+            console.log("Firebase key cache pre-warmed (expected error on dummy token).");
+        });
     } catch (err) {
         console.error("Migration error:", err);
     }

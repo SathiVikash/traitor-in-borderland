@@ -53,6 +53,9 @@ export default function TeamsManager() {
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [manageDialogOpen, setManageDialogOpen] = useState(false);
     const [newMemberEmail, setNewMemberEmail] = useState("");
+    const [extraPoints, setExtraPoints] = useState("");
+    const [pointsReason, setPointsReason] = useState("");
+    const [addingPoints, setAddingPoints] = useState(false);
 
     const fetchTeams = async () => {
         try {
@@ -106,6 +109,8 @@ export default function TeamsManager() {
         setSelectedTeam(team);
         setManageDialogOpen(true);
         setNewMemberEmail("");
+        setExtraPoints("");
+        setPointsReason("");
     };
 
     const handleAddMember = async () => {
@@ -129,6 +134,26 @@ export default function TeamsManager() {
         } catch (error: any) {
             console.error("Error removing member:", error);
             alert(error.response?.data?.message || "Failed to remove member");
+        }
+    };
+
+    const handleAddExtraPoints = async () => {
+        if (!selectedTeam || !extraPoints) return;
+        setAddingPoints(true);
+        try {
+            await adminAPI.addExtraPoints(selectedTeam.id, {
+                points: parseInt(extraPoints),
+                reason: pointsReason || "Penalty game/Admin adjustment"
+            });
+            setExtraPoints("");
+            setPointsReason("");
+            fetchTeams();
+            alert("Extra points added successfully!");
+        } catch (error: any) {
+            console.error("Error adding extra points:", error);
+            alert(error.response?.data?.message || "Failed to add extra points");
+        } finally {
+            setAddingPoints(false);
         }
     };
 
@@ -211,7 +236,7 @@ export default function TeamsManager() {
                                                         size="small"
                                                         sx={{ color: 'primary.main', border: '1px solid rgba(59, 130, 246, 0.5)' }}
                                                         onClick={() => openManageDialog(team)}
-                                                        title="Manage Members"
+                                                        title="Manage Team"
                                                     >
                                                         <Settings fontSize="small" />
                                                     </IconButton>
@@ -253,9 +278,50 @@ export default function TeamsManager() {
                             </IconButton>
                         </Box>
 
+                        {/* Extra Points Section */}
+                        <Box sx={{ mb: 4, p: 2, bgcolor: "rgba(59, 130, 246, 0.05)", borderRadius: 2, border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+                            <Typography variant="subtitle2" sx={{ mb: 2, color: "primary.light", fontWeight: 700 }}>
+                                Add Extra Points (Penalty Game / Manual)
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <TextField
+                                        label="Points"
+                                        type="number"
+                                        size="small"
+                                        sx={{ width: '100px' }}
+                                        value={extraPoints}
+                                        onChange={(e) => setExtraPoints(e.target.value)}
+                                        InputProps={{ sx: { color: 'white' } }}
+                                        InputLabelProps={{ sx: { color: 'text.secondary' } }}
+                                    />
+                                    <TextField
+                                        label="Reason (Optional)"
+                                        size="small"
+                                        fullWidth
+                                        value={pointsReason}
+                                        onChange={(e) => setPointsReason(e.target.value)}
+                                        InputProps={{ sx: { color: 'white' } }}
+                                        InputLabelProps={{ sx: { color: 'text.secondary' } }}
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={handleAddExtraPoints}
+                                        disabled={addingPoints || !extraPoints}
+                                    >
+                                        {addingPoints ? "..." : "Add"}
+                                    </Button>
+                                </Box>
+                                <Typography variant="caption" color="text.secondary">
+                                    Current Score: <b>{selectedTeam.total_score}</b>
+                                </Typography>
+                            </Box>
+                        </Box>
+
                         <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
                             <TextField
-                                label="Member Email"
+                                label="Add Member Email"
                                 size="small"
                                 fullWidth
                                 value={newMemberEmail}

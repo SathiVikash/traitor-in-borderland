@@ -115,7 +115,7 @@ router.post("/gold-bars", async (req, res) => {
         const goldBar = result.rows[0];
 
         // Generate QR code image as data URL
-        const qrCodeDataUrl = await QRCode.toDataURL(qr_code);
+        const qrCodeDataUrl = await QRCode.toDataURL(qr_code, { width: 600, margin: 2 });
 
         res.json({
             ...goldBar,
@@ -159,7 +159,7 @@ router.get("/gold-bars/:id/qr", async (req, res) => {
             return res.status(404).json({ message: "Gold bar not found" });
         }
 
-        const qrCodeDataUrl = await QRCode.toDataURL(result.rows[0].qr_code);
+        const qrCodeDataUrl = await QRCode.toDataURL(result.rows[0].qr_code, { width: 600, margin: 2 });
         res.json({ qr_code_image: qrCodeDataUrl });
     } catch (error) {
         console.error("Generate QR error:", error);
@@ -399,7 +399,7 @@ router.post("/generate-cards", async (req, res) => {
                 type: 'team_assignment',
                 team_type: 'innocent',
                 card_id: cardId
-            }));
+            }), { width: 600, margin: 2 });
             cards.push({
                 card_id: cardId,
                 team_type: 'innocent',
@@ -414,7 +414,7 @@ router.post("/generate-cards", async (req, res) => {
                 type: 'team_assignment',
                 team_type: 'traitor',
                 card_id: cardId
-            }));
+            }), { width: 600, margin: 2 });
             cards.push({
                 card_id: cardId,
                 team_type: 'traitor',
@@ -964,6 +964,48 @@ router.get("/leaderboard", async (req, res) => {
     } catch (error) {
         console.error("Admin leaderboard error:", error);
         res.status(500).json({ message: "Error fetching leaderboard" });
+    }
+});
+
+// Add extra points to team
+router.post("/teams/:id/extra-points", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { points, reason } = req.body;
+
+        if (isNaN(points)) {
+            return res.status(400).json({ message: "Invalid points value" });
+        }
+
+        const result = await db.query(
+            "UPDATE teams SET total_score = total_score + $1 WHERE id = $2 RETURNING *",
+            [points, id]
+        );
+
+        if (!result.rows.length) {
+            return res.status(404).json({ message: "Team not found" });
+        }
+
+        // Emit leaderboard update
+        const io = req.app.get("io");
+        const leaderboardResult = await db.query(`
+            SELECT t.id, t.team_name, t.team_type, t.total_score
+            FROM teams t
+            ORDER BY t.total_score DESC, t.team_name ASC
+        `);
+        io.emit("leaderboard_update", leaderboardResult.rows);
+
+        // Notify team
+        io.to(`team_${id}`).emit("score_update", {
+            points: points,
+            total_score: result.rows[0].total_score,
+            message: `Admin added extra points: ${reason || 'Penalty game results'}`
+        });
+
+        res.json({ message: "Extra points added successfully", team: result.rows[0] });
+    } catch (error) {
+        console.error("Add extra points error:", error);
+        res.status(500).json({ message: "Error adding extra points" });
     }
 });
 

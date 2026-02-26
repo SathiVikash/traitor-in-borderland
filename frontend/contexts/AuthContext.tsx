@@ -10,7 +10,7 @@ import {
     signInWithPopup,
     User
 } from "firebase/auth";
-import { authAPI } from "@/lib/api";
+import api from "@/lib/api";
 
 interface UserData {
     id: number;
@@ -35,25 +35,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [userData, setUserData] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchUserData = async () => {
+    // Fetch user data, optionally injecting a token directly (avoids race with currentUser)
+    const fetchUserData = async (idToken?: string) => {
         try {
-            const response = await authAPI.verify();
+            // If no token provided, get it from the current user (may need a small wait)
+            let tokenHeader: string | undefined;
+            if (idToken) {
+                tokenHeader = `Bearer ${idToken}`;
+            } else {
+                // Wait up to 3s for currentUser to be set
+                let attempts = 0;
+                while (!auth?.currentUser && attempts < 6) {
+                    await new Promise((r) => setTimeout(r, 500));
+                    attempts++;
+                }
+                if (auth?.currentUser) {
+                    const token = await auth.currentUser.getIdToken();
+                    tokenHeader = `Bearer ${token}`;
+                }
+            }
+
+            if (!tokenHeader) {
+                console.warn("fetchUserData: no auth token available, skipping");
+                return;
+            }
+
+            const response = await api.post("/api/auth/verify", {}, {
+                headers: { Authorization: tokenHeader }
+            });
             setUserData(response.data);
         } catch (error: any) {
             // If user not registered (403), try to register them
             if (error.response && error.response.status === 403) {
                 try {
                     console.log("User not found in backend, attempting registration...");
-                    await authAPI.registerMember();
-                    // After registration, fetch user data again
-                    const response = await authAPI.verify();
+                    // Get fresh token for registration too
+                    const user = auth?.currentUser;
+                    if (!user) return;
+                    const token = await user.getIdToken();
+                    const authHeader = { Authorization: `Bearer ${token}` };
+                    await api.post("/api/auth/register-member", {}, { headers: authHeader });
+                    // Re-verify after registration
+                    const response = await api.post("/api/auth/verify", {}, { headers: authHeader });
                     setUserData(response.data);
                 } catch (regError) {
                     console.error("Registration failed:", regError);
                     setUserData(null);
                 }
             } else {
-                console.error("Error fetching user data:", error);
+                console.error("Error fetching user data:", error.response?.status, error.response?.data || error.message);
                 setUserData(null);
             }
         }
@@ -65,10 +95,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setUser(user);
-            if (user) {
-                await fetchUserData();
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            setUser(firebaseUser);
+            if (firebaseUser) {
+                // Get a fresh token directly from the user object — guaranteed to be ready here
+                const token = await firebaseUser.getIdToken();
+                await fetchUserData(token);
             } else {
                 setUserData(null);
             }
@@ -80,14 +112,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signIn = async (email: string, password: string) => {
         if (!auth) throw new Error("Firebase not initialized");
-        await signInWithEmailAndPassword(auth, email, password);
-        await fetchUserData();
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        // Get token directly from the credential - no race condition
+        const token = await credential.user.getIdToken();
+        await fetchUserData(token);
     };
 
     const signInWithGoogle = async () => {
         if (!auth) throw new Error("Firebase not initialized");
         const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
+        const credential = await signInWithPopup(auth, provider);
+        // Get token directly from the credential - no race condition
+        const token = await credential.user.getIdToken();
+        await fetchUserData(token);
     };
 
     const signOut = async () => {

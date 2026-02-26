@@ -6,6 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 // Create axios instance
 const api = axios.create({
     baseURL: API_URL,
+    timeout: 15000,
 });
 
 // Add auth token to requests
@@ -96,6 +97,10 @@ export const adminAPI = {
 
     // Leaderboard Toggle
     toggleLeaderboard: (publish: boolean) => api.put("/api/admin/leaderboard/publish", { start_publish: publish }),
+
+    // Extra Points
+    addExtraPoints: (teamId: number, data: { points: number, reason?: string }) =>
+        api.post(`/api/admin/teams/${teamId}/extra-points`, data),
 };
 
 // Team APIs

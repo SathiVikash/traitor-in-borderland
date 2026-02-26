@@ -63,6 +63,7 @@ export default function MemberDashboard() {
     const [currentClue, setCurrentClue] = useState<string | null>(null);
     const [gameState, setGameState] = useState<any>(null);
     const [showRoundStart, setShowRoundStart] = useState(false);
+    const [showRoundEnd, setShowRoundEnd] = useState(false);
     const [sabotageAlert, setSabotageAlert] = useState<{ open: boolean; endTime: string | null }>({ open: false, endTime: null });
 
     // Join team room for real-time updates
@@ -108,6 +109,7 @@ export default function MemberDashboard() {
                 game_status: "completed"
             }));
             setSuccess(`Round ${data.round} has ended!`);
+            setShowRoundEnd(true);
             fetchData();
         });
 
@@ -483,6 +485,37 @@ export default function MemberDashboard() {
                         <Button
                             variant="contained"
                             onClick={() => setShowRoundStart(false)}
+                            sx={{ px: 4, borderRadius: 2 }}
+                        >
+                            OK
+                        </Button>
+                    </Box>
+                </Dialog>
+
+                {/* Round End Dialog */}
+                <Dialog
+                    open={showRoundEnd}
+                    onClose={() => setShowRoundEnd(false)}
+                    maxWidth="sm"
+                    fullWidth
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 3,
+                            background: "linear-gradient(135deg, #475569 0%, #1E293B 100%)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                        }
+                    }}
+                >
+                    <Box sx={{ p: 4, textAlign: "center" }}>
+                        <Typography variant="h4" sx={{ fontWeight: 800, mb: 2, color: "#94A3B8" }}>
+                            ROUND {gameState?.current_round} ENDED!
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                            Check the leaderboard and wait for the next round to start.
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            onClick={() => setShowRoundEnd(false)}
                             sx={{ px: 4, borderRadius: 2 }}
                         >
                             OK
