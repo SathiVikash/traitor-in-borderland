@@ -25,7 +25,7 @@ import {
     ListItemText,
     ListItemSecondaryAction,
 } from "@mui/material";
-import { Delete, PersonAdd, Settings, Close, PersonRemove } from "@mui/icons-material";
+import { Delete, PersonAdd, Settings, Close, PersonRemove, AddCircle } from "@mui/icons-material";
 import { adminAPI } from "@/lib/api";
 
 interface TeamMember {
@@ -56,6 +56,8 @@ export default function TeamsManager() {
     const [extraPoints, setExtraPoints] = useState("");
     const [pointsReason, setPointsReason] = useState("");
     const [addingPoints, setAddingPoints] = useState(false);
+    const [quickScoreDialog, setQuickScoreDialog] = useState(false);
+    const [quickScoreTeam, setQuickScoreTeam] = useState<Team | null>(null);
 
     const fetchTeams = async () => {
         try {
@@ -137,24 +139,31 @@ export default function TeamsManager() {
         }
     };
 
-    const handleAddExtraPoints = async () => {
-        if (!selectedTeam || !extraPoints) return;
+    const submitPoints = async (teamId: number, points: string, reason: string, isQuick: boolean) => {
+        if (!points) return;
         setAddingPoints(true);
         try {
-            await adminAPI.addExtraPoints(selectedTeam.id, {
-                points: parseInt(extraPoints),
-                reason: pointsReason || "Penalty game/Admin adjustment"
+            await adminAPI.addExtraPoints(teamId, {
+                points: parseInt(points),
+                reason: reason || (isQuick ? "Manual Adjustment" : "Penalty game/Admin adjustment")
             });
             setExtraPoints("");
             setPointsReason("");
+            if (isQuick) setQuickScoreDialog(false);
             fetchTeams();
-            alert("Extra points added successfully!");
         } catch (error: any) {
-            console.error("Error adding extra points:", error);
-            alert(error.response?.data?.message || "Failed to add extra points");
+            alert(error.response?.data?.message || "Failed to add points");
         } finally {
             setAddingPoints(false);
         }
+    };
+
+    const handleQuickScore = () => {
+        if (quickScoreTeam) submitPoints(quickScoreTeam.id, extraPoints, pointsReason, true);
+    };
+
+    const handleAddExtraPoints = () => {
+        if (selectedTeam) submitPoints(selectedTeam.id, extraPoints, pointsReason, false);
     };
 
     return (
@@ -232,6 +241,19 @@ export default function TeamsManager() {
                                                     >
                                                         {team.total_score <= -9999 ? "Disqualified" : "Disqualify"}
                                                     </Button>
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ color: 'success.main', border: '1px solid rgba(34, 197, 94, 0.5)' }}
+                                                        onClick={() => {
+                                                            setQuickScoreTeam(team);
+                                                            setExtraPoints("");
+                                                            setPointsReason("");
+                                                            setQuickScoreDialog(true);
+                                                        }}
+                                                        title="Quick Score"
+                                                    >
+                                                        <AddCircle fontSize="small" />
+                                                    </IconButton>
                                                     <IconButton
                                                         size="small"
                                                         sx={{ color: 'primary.main', border: '1px solid rgba(59, 130, 246, 0.5)' }}
@@ -387,6 +409,51 @@ export default function TeamsManager() {
                         </Box>
                     </Box>
                 )}
+            </Dialog>
+            {/* Quick Score Dialog */}
+            <Dialog
+                open={quickScoreDialog}
+                onClose={() => setQuickScoreDialog(false)}
+                PaperProps={{
+                    sx: { bgcolor: "#1E293B", color: "white", border: "1px solid rgba(255,255,255,0.1)" }
+                }}
+            >
+                <Box sx={{ p: 3, minWidth: 320 }}>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                        Quick Score: {quickScoreTeam?.team_name}
+                    </Typography>
+                    <Box sx={{ mb: 3 }}>
+                        <TextField
+                            fullWidth
+                            label="Points (use negative for deduction)"
+                            type="number"
+                            value={extraPoints}
+                            onChange={(e) => setExtraPoints(e.target.value)}
+                            sx={{ mb: 2, input: { color: 'white' }, label: { color: 'text.secondary' } }}
+                            autoFocus
+                        />
+                        <TextField
+                            fullWidth
+                            label="Reason (e.g., Mini Game Win)"
+                            value={pointsReason}
+                            onChange={(e) => setPointsReason(e.target.value)}
+                            sx={{ input: { color: 'white' }, label: { color: 'text.secondary' } }}
+                        />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button onClick={() => setQuickScoreDialog(false)} sx={{ color: 'text.secondary' }}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="success"
+                            onClick={handleQuickScore}
+                            disabled={addingPoints || !extraPoints}
+                        >
+                            {addingPoints ? "Adding..." : "Add Points"}
+                        </Button>
+                    </Box>
+                </Box>
             </Dialog>
         </Card>
     );

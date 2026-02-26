@@ -24,7 +24,7 @@ import {
     DialogActions,
     IconButton,
 } from "@mui/material";
-import { Add, QrCode2, Download, Close, Delete } from "@mui/icons-material";
+import { Add, QrCode2, Download, Close, Delete, Edit } from "@mui/icons-material";
 import { adminAPI } from "@/lib/api";
 
 interface Location {
@@ -52,6 +52,10 @@ export default function GoldBarsManager() {
     const [selectedQR, setSelectedQR] = useState("");
     const [selectedGoldBar, setSelectedGoldBar] = useState<GoldBar | null>(null);
     const [loadingQR, setLoadingQR] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingBar, setEditingBar] = useState<GoldBar | null>(null);
+    const [editForm, setEditForm] = useState({ points: "", location_id: "", clue_text: "", clue_location_id: "" });
+    const [editSubmitting, setEditSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         points: "",
@@ -284,6 +288,42 @@ export default function GoldBarsManager() {
         setSelectedGoldBar(null);
     };
 
+    const handleOpenEdit = (bar: GoldBar) => {
+        setEditingBar(bar);
+        // Find location_id by matching location_name in locations list
+        const loc = locations.find(l => l.location_name === bar.location_name);
+        const clueLoc = locations.find(l => l.location_name === bar.clue_location_name);
+        setEditForm({
+            points: String(bar.points),
+            location_id: loc ? String(loc.id) : "",
+            clue_text: bar.clue_text,
+            clue_location_id: clueLoc ? String(clueLoc.id) : "",
+        });
+        setEditDialogOpen(true);
+    };
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingBar) return;
+        setEditSubmitting(true);
+        try {
+            await adminAPI.updateGoldBar(editingBar.id, {
+                points: parseInt(editForm.points),
+                location_id: parseInt(editForm.location_id),
+                clue_text: editForm.clue_text,
+                clue_location_id: parseInt(editForm.clue_location_id),
+            });
+            setEditDialogOpen(false);
+            setEditingBar(null);
+            const goldBarsRes = await adminAPI.getGoldBars();
+            setGoldBars(goldBarsRes.data);
+        } catch (error: any) {
+            alert(error.response?.data?.message || "Failed to update gold bar");
+        } finally {
+            setEditSubmitting(false);
+        }
+    };
+
     return (
         <>
             <Grid container spacing={3}>
@@ -455,6 +495,14 @@ export default function GoldBarsManager() {
                                                     }
                                                 />
                                                 <Box sx={{ display: 'flex', gap: 1 }}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleOpenEdit(bar)}
+                                                        sx={{ color: 'warning.main', border: '1px solid rgba(234,179,8,0.4)' }}
+                                                        title="Edit Gold Bar"
+                                                    >
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
                                                     <Button
                                                         variant="outlined"
                                                         size="small"
@@ -578,6 +626,113 @@ export default function GoldBarsManager() {
                         }}
                     >
                         Download QR Code
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Edit Gold Bar Dialog */}
+            <Dialog
+                open={editDialogOpen}
+                onClose={() => setEditDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { bgcolor: "#1E293B", color: "white", border: "1px solid rgba(255,255,255,0.1)" }
+                }}
+            >
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6">Edit Gold Bar</Typography>
+                        <IconButton onClick={() => setEditDialogOpen(false)} sx={{ color: 'text.secondary' }}>
+                            <Close />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Box component="form" sx={{ mt: 1 }}>
+                        <TextField
+                            fullWidth
+                            label="Points"
+                            type="number"
+                            value={editForm.points}
+                            onChange={(e) => setEditForm({ ...editForm, points: e.target.value })}
+                            required
+                            sx={{ mb: 3, input: { color: 'white' }, label: { color: 'text.secondary' } }}
+                        />
+
+                        <FormControl fullWidth sx={{ mb: 3 }}>
+                            <InputLabel sx={{ color: 'text.secondary' }}>Gold Bar Location</InputLabel>
+                            <Select
+                                value={editForm.location_id}
+                                onChange={(e) => setEditForm({ ...editForm, location_id: e.target.value })}
+                                required
+                                sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                            >
+                                {locations.map((loc) => (
+                                    <MenuItem key={loc.id} value={loc.id}>
+                                        {loc.location_name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <TextField
+                            fullWidth
+                            label="Clue Text"
+                            value={editForm.clue_text}
+                            onChange={(e) => setEditForm({ ...editForm, clue_text: e.target.value })}
+                            required
+                            multiline
+                            rows={2}
+                            sx={{ mb: 3, input: { color: 'white' }, label: { color: 'text.secondary' } }}
+                        />
+
+                        <FormControl fullWidth sx={{ mb: 3 }}>
+                            <InputLabel sx={{ color: 'text.secondary' }}>Clue Points To</InputLabel>
+                            <Select
+                                value={editForm.clue_location_id}
+                                onChange={(e) => setEditForm({ ...editForm, clue_location_id: e.target.value })}
+                                required
+                                sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                            >
+                                {locations
+                                    .filter((loc) => loc.id.toString() !== editForm.location_id)
+                                    .map((loc) => (
+                                        <MenuItem key={loc.id} value={loc.id}>
+                                            {loc.location_name}
+                                        </MenuItem>
+                                    ))}
+                            </Select>
+                        </FormControl>
+
+                        {editingBar?.entry_code && (
+                            <Box sx={{ p: 2, bgcolor: "rgba(255,255,255,0.05)", borderRadius: 1, border: "1px dashed rgba(255,255,255,0.2)" }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    UNIQUE ENTRY CODE (PERMANENT)
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontFamily: 'monospace', letterSpacing: 4, color: '#EAB308' }}>
+                                    #{editingBar.entry_code}
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3 }}>
+                    <Button onClick={() => setEditDialogOpen(false)} sx={{ color: 'text.secondary' }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleEditSubmit}
+                        variant="contained"
+                        disabled={editSubmitting}
+                        startIcon={editSubmitting && <CircularProgress size={16} />}
+                        sx={{
+                            background: "linear-gradient(135deg, #EAB308 0%, #CA8A04 100%)",
+                            color: "#000",
+                            fontWeight: 700
+                        }}
+                    >
+                        {editSubmitting ? "Saving..." : "Save Changes"}
                     </Button>
                 </DialogActions>
             </Dialog>

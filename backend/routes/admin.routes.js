@@ -201,6 +201,39 @@ router.delete("/gold-bars/:id", async (req, res) => {
     }
 });
 
+// Edit gold bar (preserves entry_code and qr_code)
+router.put("/gold-bars/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { points, location_id, clue_text, clue_location_id } = req.body;
+
+        const existing = await db.query("SELECT * FROM gold_bars WHERE id = $1", [id]);
+        if (!existing.rows.length) {
+            return res.status(404).json({ message: "Gold bar not found" });
+        }
+
+        if (location_id && clue_location_id && parseInt(location_id) === parseInt(clue_location_id)) {
+            return res.status(400).json({ message: "Gold bar location and clue location must be different" });
+        }
+
+        const result = await db.query(
+            `UPDATE gold_bars
+             SET points = COALESCE($1, points),
+                 location_id = COALESCE($2, location_id),
+                 clue_text = COALESCE($3, clue_text),
+                 clue_location_id = COALESCE($4, clue_location_id)
+             WHERE id = $5
+             RETURNING *`,
+            [points || null, location_id || null, clue_text || null, clue_location_id || null, id]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Edit gold bar error:", error);
+        res.status(500).json({ message: "Error updating gold bar" });
+    }
+});
+
 
 // Get sabotage history
 router.get("/sabotages", async (req, res) => {

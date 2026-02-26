@@ -44,6 +44,8 @@ export const adminAPI = {
     }) => api.post("/api/admin/gold-bars", data),
     getGoldBars: () => api.get("/api/admin/gold-bars"),
     getGoldBarQR: (id: number) => api.get(`/api/admin/gold-bars/${id}/qr`),
+    updateGoldBar: (id: number, data: { points?: number; location_id?: number; clue_text?: string; clue_location_id?: number }) =>
+        api.put(`/api/admin/gold-bars/${id}`, data),
     deleteGoldBar: (id: number) => api.delete(`/api/admin/gold-bars/${id}`),
 
     // Sabotages
