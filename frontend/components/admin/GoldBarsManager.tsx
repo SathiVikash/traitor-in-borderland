@@ -229,11 +229,30 @@ export default function GoldBarsManager() {
             ctx.lineTo(CARD_W - 80, qrY + QR_SIZE + 114);
             ctx.stroke();
 
-            // Location label — bottom section
+            // Location label — bottom section (wrapped to stay inside frame)
             ctx.fillStyle = "#1F2937";
             ctx.font = "bold 28px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(`📍 ${selectedGoldBar!.location_name}`, CARD_W / 2, qrY + QR_SIZE + 152);
+            const locationText = `📍 ${selectedGoldBar!.location_name}`;
+            const maxWidth = CARD_W - 80; // 40px padding each side
+            const lineHeight = 36;
+            const words = locationText.split(" ");
+            const locLines: string[] = [];
+            let currentLine = "";
+            for (const word of words) {
+                const testLine = currentLine ? `${currentLine} ${word}` : word;
+                if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+                    locLines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            if (currentLine) locLines.push(currentLine);
+            const locStartY = qrY + QR_SIZE + 152;
+            locLines.forEach((line, idx) => {
+                ctx.fillText(line, CARD_W / 2, locStartY + idx * lineHeight);
+            });
 
             // Bottom footer
             ctx.fillStyle = "#9CA3AF";
