@@ -47,10 +47,7 @@ interface PollData {
 
 interface PollEndedPayload {
     poll_id: number;
-    traitor_found: boolean;
-    found_team_id: number | null;
-    found_team_name: string | null;
-    results: PollResult[];
+    status: string;
 }
 
 export default function TraitorPoll() {
@@ -155,9 +152,8 @@ export default function TraitorPoll() {
 
     if (!open) return null;
 
-    // ── RESULT VIEW ──────────────────────────────────────────────────
-    if (showResult && result) {
-        const topVotes = result.results?.[0]?.vote_count || 0;
+    // ── RESULT VIEW (Simplified - No results revealed) ────────────────
+    if (showResult) {
         return (
             <Dialog
                 open={open}
@@ -166,89 +162,44 @@ export default function TraitorPoll() {
                 PaperProps={{
                     sx: {
                         borderRadius: 4,
-                        background: result.traitor_found
-                            ? "linear-gradient(135deg, #0D0A0A 0%, #2D0808 100%)"
-                            : "linear-gradient(135deg, #0D1117 0%, #0F2D0A 100%)",
-                        border: `1px solid ${result.traitor_found ? "rgba(239,68,68,0.4)" : "rgba(34,197,94,0.4)"}`,
+                        background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+                        border: "1px solid rgba(234,179,8,0.3)",
                         color: "white",
                         overflow: "hidden",
                     }
                 }}
             >
                 <Box sx={{ p: 4, textAlign: "center" }}>
-                    {/* Verdict banner */}
                     <Box sx={{
                         mb: 3,
                         p: 2.5,
                         borderRadius: 3,
-                        bgcolor: result.traitor_found ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)",
-                        border: `1px solid ${result.traitor_found ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)"}`,
+                        bgcolor: "rgba(234,179,8,0.12)",
+                        border: "1px solid rgba(234,179,8,0.3)",
                     }}>
                         <Typography variant="h3" sx={{
                             fontWeight: 900,
-                            color: result.traitor_found ? "#EF4444" : "#22C55E",
+                            color: "#EAB308",
                             mb: 1,
                             fontSize: { xs: "1.8rem", sm: "2.5rem" }
                         }}>
-                            {result.traitor_found ? "🎯 TRAITOR FOUND!" : "🛡️ NOT FOUND"}
+                            POLL ENDED
                         </Typography>
                         <Typography variant="h6" sx={{ color: "rgba(255,255,255,0.8)" }}>
-                            {result.traitor_found
-                                ? `Team "${result.found_team_name}" has been exposed! They must complete a physical task.`
-                                : "The traitor remains hidden. No team got the majority vote."}
+                            The voting period has concluded. The results have been sent to the Admin for review.
                         </Typography>
                     </Box>
 
-                    {/* Vote results */}
-                    <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.4)", letterSpacing: 3 }}>
-                        VOTE RESULTS
+                    <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)", mb: 3 }}>
+                        Stay alert and continue your mission. The game continues.
                     </Typography>
-                    <Box sx={{ mt: 1.5, mb: 3, display: "flex", flexDirection: "column", gap: 1 }}>
-                        {result.results?.map((r, i) => (
-                            <Box key={r.team_id} sx={{
-                                display: "flex", alignItems: "center", gap: 2, p: 1.5,
-                                borderRadius: 2,
-                                bgcolor: r.team_id === result.found_team_id
-                                    ? "rgba(239,68,68,0.15)"
-                                    : "rgba(255,255,255,0.04)",
-                                border: r.team_id === result.found_team_id
-                                    ? "1px solid rgba(239,68,68,0.4)"
-                                    : "1px solid rgba(255,255,255,0.08)",
-                            }}>
-                                <Typography sx={{ fontWeight: 700, color: "rgba(255,255,255,0.4)", minWidth: 24 }}>
-                                    #{i + 1}
-                                </Typography>
-                                <Typography sx={{ flex: 1, fontWeight: 600 }}>{r.team_name}</Typography>
-                                {r.team_id === result.found_team_id && (
-                                    <Chip label="TRAITOR" size="small" sx={{ bgcolor: "#EF4444", color: "white", fontWeight: 700, fontSize: "0.65rem" }} />
-                                )}
-                                <Box sx={{
-                                    minWidth: 80, textAlign: "right",
-                                    display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end"
-                                }}>
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={topVotes > 0 ? (r.vote_count / topVotes) * 100 : 0}
-                                        sx={{
-                                            width: 60, height: 6, borderRadius: 3,
-                                            bgcolor: "rgba(255,255,255,0.1)",
-                                            "& .MuiLinearProgress-bar": {
-                                                bgcolor: r.team_id === result.found_team_id ? "#EF4444" : "#3B82F6"
-                                            }
-                                        }}
-                                    />
-                                    <Typography sx={{ fontWeight: 700, color: r.team_id === result.found_team_id ? "#EF4444" : "#94A3B8", minWidth: 28 }}>
-                                        {r.vote_count}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        ))}
-                        {(!result.results || result.results.length === 0) && (
-                            <Typography sx={{ color: "rgba(255,255,255,0.4)", py: 2 }}>No votes were cast.</Typography>
-                        )}
-                    </Box>
 
-                    <Button variant="outlined" onClick={() => setOpen(false)} sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)" }}>
+                    <Button variant="contained" onClick={() => setOpen(false)} sx={{
+                        background: "linear-gradient(135deg, #EAB308 0%, #CA8A04 100%)",
+                        color: "#000",
+                        fontWeight: 700,
+                        px: 4
+                    }}>
                         Dismiss
                     </Button>
                 </Box>
@@ -328,20 +279,8 @@ export default function TraitorPoll() {
                     <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>
                 )}
 
-                {pollData?.my_team_type === "traitor" ? (
-                    /* Traitor Restriction View */
-                    <Box sx={{ textAlign: "center", py: 4, px: 2, bgcolor: "rgba(239,68,68,0.05)", borderRadius: 3, border: "1px solid rgba(239,68,68,0.2)" }}>
-                        <Dangerous sx={{ fontSize: 48, color: "#EF4444", mb: 2 }} />
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: "#EF4444" }}>
-                            Traitor Restricted
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)" }}>
-                            As a Traitor team, you are not allowed to participate in this vote.
-                            Stay hidden and wait for the results to see if you've been discovered.
-                        </Typography>
-                    </Box>
-                ) : hasVoted ? (
-                    /* Already voted (Innocent) */
+                {hasVoted ? (
+                    /* Already voted */
                     <Box sx={{ textAlign: "center", py: 3 }}>
                         <CheckCircle sx={{ fontSize: 56, color: "#22C55E", mb: 1.5 }} />
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Vote Submitted!</Typography>
@@ -351,7 +290,7 @@ export default function TraitorPoll() {
                             </strong>
                         </Typography>
                         <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.35)", display: "block", mt: 2 }}>
-                            Results will be revealed when the poll ends.
+                            Results will be reviewed by the Admin when the poll ends.
                         </Typography>
                         <Box sx={{ mt: 2, display: "flex", alignItems: "center", gap: 1, justifyContent: "center" }}>
                             <CircularProgress size={14} sx={{ color: "#EAB308" }} />
@@ -361,10 +300,12 @@ export default function TraitorPoll() {
                         </Box>
                     </Box>
                 ) : (
-                    /* Voting UI (Innocent) */
+                    /* Voting UI */
                     <>
                         <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)", mb: 2 }}>
-                            Which team do you think is the traitor? Vote carefully — votes are hidden until the poll ends.
+                            {pollData?.my_team_type === "traitor"
+                                ? "Throw suspicion on an innocent team! Vote carefully — votes are hidden."
+                                : "Which team do you think is the traitor? Vote carefully — votes are hidden."}
                         </Typography>
 
                         <Box sx={{ display: "grid", gap: 1, maxHeight: 320, overflowY: "auto", pr: 0.5, mb: 2 }}>

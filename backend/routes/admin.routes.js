@@ -1136,27 +1136,11 @@ async function endPoll(pollId, io) {
         }
     }
 
-    // Broadcast results to all
+    // Broadcast simple poll_ended event to all players (no results)
     io.emit("poll_ended", {
         poll_id: pollId,
-        traitor_found: traitorFound,
-        found_team_id: foundTeamId,
-        found_team_name: foundTeamName,
-        results: results.map(r => ({
-            team_id: r.voted_for_team_id,
-            team_name: r.team_name,
-            team_type: r.team_type,
-            vote_count: parseInt(r.vote_count)
-        }))
+        status: 'completed'
     });
-
-    // Alert the found traitor team specifically
-    if (traitorFound && foundTeamId) {
-        io.to(`team_${foundTeamId}`).emit("traitor_exposed", {
-            message: "Your team has been identified as the traitor! Prepare for your physical task.",
-            poll_id: pollId
-        });
-    }
 }
 
 // Get current/latest poll (admin view with votes)

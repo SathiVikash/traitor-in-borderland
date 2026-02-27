@@ -430,25 +430,8 @@ router.get("/poll/current", verifyToken, async (req, res) => {
             "SELECT id, team_name FROM teams ORDER BY team_name ASC"
         );
 
-        // Only reveal vote counts if poll is completed
-        let results = null;
-        if (!isActive) {
-            const voteCounts = await db.query(`
-                SELECT pv.voted_for_team_id, t.team_name, t.team_type,
-                       COUNT(*) as vote_count
-                FROM poll_votes pv
-                JOIN teams t ON t.id = pv.voted_for_team_id
-                WHERE pv.poll_id = $1
-                GROUP BY pv.voted_for_team_id, t.team_name, t.team_type
-                ORDER BY vote_count DESC
-            `, [poll.id]);
-            results = voteCounts.rows.map(r => ({
-                team_id: r.voted_for_team_id,
-                team_name: r.team_name,
-                team_type: r.team_type,
-                vote_count: parseInt(r.vote_count)
-            }));
-        }
+        // Never reveal results to players in this endpoint
+        const results = null;
 
         res.json({
             poll: { ...poll, is_active: isActive },
@@ -457,7 +440,7 @@ router.get("/poll/current", verifyToken, async (req, res) => {
             my_vote_team_id: myVoteTeamId,
             my_team_id: myTeamId,
             my_team_type: myTeamType,
-            results // null while active
+            results // always null for players
         });
     } catch (error) {
         console.error("Get poll error:", error);
