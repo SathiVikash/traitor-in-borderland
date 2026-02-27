@@ -387,17 +387,10 @@ router.post("/scan-gold-bar", async (req, res) => {
                 });
             }
 
-            // 2. Verify it's their target
+            // 2. Check if it's their target (we allow scanning any bar now)
             const clueCheck = await client.query("SELECT next_gold_bar_id FROM team_clues WHERE team_id = $1", [teamId]);
             const currentTargetId = clueCheck.rows.length > 0 ? clueCheck.rows[0].next_gold_bar_id : null;
-
-            if (currentTargetId && currentTargetId !== goldBar.id) {
-                await client.query("ROLLBACK");
-                return res.json({
-                    success: false,
-                    message: "This is not the correct gold bar! Follow your clue."
-                });
-            }
+            const isTarget = currentTargetId === goldBar.id;
 
             // 3. Check sabotage
             const sabotageResult = await client.query(`
@@ -424,12 +417,12 @@ router.post("/scan-gold-bar", async (req, res) => {
             `, [pointsToAdd, teamId]);
             const newTotalScore = scoreUpdateResult.rows[0].total_score;
 
-            // 7. Assign next clue
+            // 7. Assign next clue (always assign a new one after any successful scan)
+            let nextClue = null;
             const nextGoldBarRes = await client.query(`
                 SELECT id, clue_text, clue_location_id FROM gold_bars WHERE is_scanned = FALSE ORDER BY RANDOM() LIMIT 1
             `);
 
-            let nextClue = null;
             if (nextGoldBarRes.rows.length > 0) {
                 const nextGB = nextGoldBarRes.rows[0];
                 await client.query(`
