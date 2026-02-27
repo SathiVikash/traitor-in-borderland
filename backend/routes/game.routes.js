@@ -393,12 +393,15 @@ router.get("/poll/current", verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // Get team
-        const teamResult = await db.query(
-            "SELECT team_id FROM team_members WHERE user_id = $1",
-            [userId]
-        );
+        // Get team and type
+        const teamResult = await db.query(`
+            SELECT tm.team_id, t.team_type 
+            FROM team_members tm
+            JOIN teams t ON t.id = tm.team_id
+            WHERE tm.user_id = $1
+        `, [userId]);
         const myTeamId = teamResult.rows[0]?.team_id || null;
+        const myTeamType = teamResult.rows[0]?.team_type || null;
 
         // Get latest poll
         const pollResult = await db.query(
@@ -453,6 +456,7 @@ router.get("/poll/current", verifyToken, async (req, res) => {
             has_voted: hasVoted,
             my_vote_team_id: myVoteTeamId,
             my_team_id: myTeamId,
+            my_team_type: myTeamType,
             results // null while active
         });
     } catch (error) {

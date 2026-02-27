@@ -13,7 +13,7 @@ import {
     CircularProgress,
     Alert,
 } from "@mui/material";
-import { HowToVote, EmojiEvents, Search, Close, CheckCircle } from "@mui/icons-material";
+import { HowToVote, EmojiEvents, Search, Close, CheckCircle, Dangerous } from "@mui/icons-material";
 import { gameAPI } from "@/lib/api";
 import socket from "@/lib/socket";
 
@@ -41,6 +41,7 @@ interface PollData {
     has_voted: boolean;
     my_vote_team_id: number | null;
     my_team_id: number | null;
+    my_team_type: "innocent" | "traitor" | null;
     results: PollResult[] | null;
 }
 
@@ -76,14 +77,12 @@ export default function TraitorPoll() {
                     );
                     setTimeLeft(remaining);
                     setOpen(true);
-                } else if (data.results && !showResult) {
-                    setOpen(true);
                 }
             }
         } catch (e) {
             // silently ignore
         }
-    }, [showResult]);
+    }, []);
 
     // Countdown timer
     useEffect(() => {
@@ -116,6 +115,7 @@ export default function TraitorPoll() {
         socket.on("poll_ended", (data: PollEndedPayload) => {
             setResult(data);
             setShowResult(true);
+            setOpen(true);
             setTimeLeft(0);
             loadPoll();
         });
@@ -328,8 +328,20 @@ export default function TraitorPoll() {
                     <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>
                 )}
 
-                {hasVoted ? (
-                    /* Already voted */
+                {pollData?.my_team_type === "traitor" ? (
+                    /* Traitor Restriction View */
+                    <Box sx={{ textAlign: "center", py: 4, px: 2, bgcolor: "rgba(239,68,68,0.05)", borderRadius: 3, border: "1px solid rgba(239,68,68,0.2)" }}>
+                        <Dangerous sx={{ fontSize: 48, color: "#EF4444", mb: 2 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: "#EF4444" }}>
+                            Traitor Restricted
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)" }}>
+                            As a Traitor team, you are not allowed to participate in this vote.
+                            Stay hidden and wait for the results to see if you've been discovered.
+                        </Typography>
+                    </Box>
+                ) : hasVoted ? (
+                    /* Already voted (Innocent) */
                     <Box sx={{ textAlign: "center", py: 3 }}>
                         <CheckCircle sx={{ fontSize: 56, color: "#22C55E", mb: 1.5 }} />
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Vote Submitted!</Typography>
@@ -349,7 +361,7 @@ export default function TraitorPoll() {
                         </Box>
                     </Box>
                 ) : (
-                    /* Voting UI */
+                    /* Voting UI (Innocent) */
                     <>
                         <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)", mb: 2 }}>
                             Which team do you think is the traitor? Vote carefully — votes are hidden until the poll ends.
