@@ -23,8 +23,8 @@ export default function SiteHeader() {
                 zIndex: 1200,
             }}
         >
-            {/* Left – VIT Logo */}
-            <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {/* Left – VIT Logo (temporarily hidden) */}
+            {/* <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <Image
                     src="/vit-logo.png"
                     alt="VIT University"
@@ -37,10 +37,10 @@ export default function SiteHeader() {
                     }}
                     priority
                 />
-            </Box>
+            </Box> */}
 
-            {/* Centre – Riviera 2026 Logo */}
-            <Box
+            {/* Centre – Riviera 2026 Logo (temporarily hidden) */}
+            {/* <Box
                 sx={{
                     display: "flex",
                     alignItems: "center",
@@ -61,10 +61,10 @@ export default function SiteHeader() {
                     }}
                     priority
                 />
-            </Box>
+            </Box> */}
 
-            {/* Right – Pepsi Logo */}
-            <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {/* Right – Pepsi Logo (temporarily hidden) */}
+            {/* <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <Image
                     src="/pepsi-logo.png"
                     alt="Pepsi – Official Sponsor"
@@ -77,7 +77,7 @@ export default function SiteHeader() {
                     }}
                     priority
                 />
-            </Box>
+            </Box> */}
         </Box>
     );
 }

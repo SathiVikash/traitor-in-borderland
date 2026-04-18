@@ -20,8 +20,8 @@ export default function SiteFooter() {
                 background: "rgba(15, 23, 42, 0.6)",
             }}
         >
-            {/* Health Club Logo – far left corner */}
-            <Box
+            {/* Health Club Logo – far left corner (temporarily hidden) */}
+            {/* <Box
                 sx={{
                     position: "absolute",
                     left: { xs: 8, sm: 16 },
@@ -42,7 +42,7 @@ export default function SiteFooter() {
                         height: "auto",
                     }}
                 />
-            </Box>
+            </Box> */}
 
             {/* Centre – copyright + attribution */}
             <Box sx={{ textAlign: "center" }}>
@@ -83,8 +83,8 @@ export default function SiteFooter() {
                 </Typography>
             </Box>
 
-            {/* 40 Years VIT Logo – far right corner */}
-            <Box
+            {/* 40 Years VIT Logo – far right corner (temporarily hidden) */}
+            {/* <Box
                 sx={{
                     position: "absolute",
                     right: { xs: 8, sm: 16 },
@@ -105,7 +105,7 @@ export default function SiteFooter() {
                         height: "auto",
                     }}
                 />
-            </Box>
+            </Box> */}
         </Box>
     );
 }
