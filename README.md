@@ -305,7 +305,7 @@ Optimized indexes for performance:
 
 ## 📄 License
 
-This project is built for Health Club - VIT.
+This project is built for Health Club - VIT by Kamaleshwar S.
 
 ## 🤝 Support
 
